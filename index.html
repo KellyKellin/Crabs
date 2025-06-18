@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Summer Quiz Game</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: url('https://i.postimg.cc/nh6MDkQy/beach-texture-with-golden-sandy-waves-vector.jpg') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Fredoka One', cursive, sans-serif;
+    color: #fff;
+  }
+  #score, #timer {
+    position: fixed;
+    background: rgba(0,0,0,0.5);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: bold;
+    user-select: none;
+    z-index: 1000;
+    text-shadow: 1px 1px 3px #000;
+  }
+  #score { top: 10px; left: 10px; }
+  #timer { top: 10px; right: 10px; display: none; }
+
+  #game {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+  }
+  .object {
+    position: absolute;
+    width: 110px;
+    height: 110px;
+    background: url('https://i.postimg.cc/YSRKH2kd/i-2.webp') no-repeat center center;
+    background-size: contain;
+    cursor: pointer;
+    user-select: none;
+    will-change: transform, opacity;
+    filter: drop-shadow(0 0 3px #fff);
+    /* animation: flicker 2s infinite alternate; */ /* Мерцание отключено */
+    z-index: 10;
+  }
+
+  #questionBox {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255 255 255 / 0.95);
+    padding: 30px 40px;
+    border-radius: 20px;
+    box-shadow: 0 0 25px 10px rgba(255, 223, 70, 0.8);
+    text-align: center;
+    font-family: 'Fredoka One', cursive, sans-serif;
+    color: #000;
+    display: none;
+    z-index: 10000;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  #questionText {
+    font-size: 1.8rem;
+    margin-bottom: 25px;
+    text-shadow: none;
+  }
+  #options button {
+    background: #f9a825;
+    border: 2px solid #ef6c00;
+    border-radius: 12px;
+    color: #000;
+    cursor: pointer;
+    font-family: 'Fredoka One', cursive, sans-serif;
+    font-size: 1.3rem;
+    margin: 10px 15px;
+    padding: 12px 25px;
+    min-width: 180px;
+    box-shadow: 0 0 12px #f9a825cc;
+    transition: background 0.3s, box-shadow 0.3s;
+    user-select: none;
+  }
+  #options button:hover {
+    background: #ffb300;
+    box-shadow: 0 0 20px 8px #ffc107;
+  }
+  #options button.incorrect {
+    animation: shake 0.5s;
+    background: #d32f2f !important;
+    box-shadow: 0 0 15px 5px #d32f2fcc !important;
+    color: #fff !important;
+  }
+  #congrats {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255 193 7 / 0.9);
+    color: #fff;
+    font-family: 'Fredoka One', cursive, sans-serif;
+    font-size: 3rem;
+    padding: 40px 60px;
+    border-radius: 30px;
+    box-shadow: 0 0 50px 25px #ffc107cc;
+    display: none;
+    z-index: 11000;
+    user-select: none;
+    text-align: center;
+    text-shadow: 0 0 15px #fff3e0;
+  }
+
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-6px); }
+    50% { transform: translateX(6px); }
+    75% { transform: translateX(-6px); }
+    100% { transform: translateX(0); }
+  }
+</style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <div id="timer">Time: 15</div>
+  <div id="game"></div>
+
+  <div id="questionBox">
+    <p id="questionText">Вопрос</p>
+    <div id="options"></div>
+  </div>
+
+  <div id="congrats">Happy Holidays!</div>
+
+<script>
+  const game = document.getElementById('game');
+  const questionBox = document.getElementById('questionBox');
+  const questionText = document.getElementById('questionText');
+  const optionsContainer = document.getElementById('options');
+  const scoreDisplay = document.getElementById('score');
+  const timerDisplay = document.getElementById('timer');
+  const congrats = document.getElementById('congrats');
+
+  const settings = {
+    backgroundImageUrl: "https://i.postimg.cc/nh6MDkQy/beach-texture-with-golden-sandy-waves-vector.jpg",
+    objectImageUrl: "https://i.postimg.cc/15KKs1S4/i-2-Picsart-Background-Remover-Picsart-Background-Remover.png",
+    fontFamily: "'Fredoka One', cursive",
+    timerSeconds: 15,
+    objectSize: 110
+  };
+
+  const questions = [
+    { question: "What is the typical fruit of summer?", options: ["Apple", "Watermelon", "Orange"], correct: 1 },
+    { question: "Where do people usually go on summer vacation?", options: ["Beach", "Mountains", "City"], correct: 0 },
+    { question: "Which activity is common in summer?", options: ["Skiing", "Swimming", "Ice skating"], correct: 1 },
+    { question: "What do people wear in summer?", options: ["Coats", "Swimsuits", "Boots"], correct: 1 },
+    { question: "Which animal is often seen at the beach?", options: ["Polar bear", "Seagull", "Penguin"], correct: 1 },
+    { question: "What drink is popular in summer?", options: ["Hot chocolate", "Lemonade", "Coffee"], correct: 1 },
+    { question: "What sun protection is important in summer?", options: ["Sunscreen", "Scarf", "Gloves"], correct: 0 },
+    { question: "What is a popular summer fruit?", options: ["Banana", "Strawberry", "Pumpkin"], correct: 1 },
+    { question: "Which insect is common in summer?", options: ["Mosquito", "Ladybug", "Dragonfly"], correct: 0 },
+    { question: "What do people build at the beach?", options: ["Snowmen", "Sandcastles", "Igloos"], correct: 1 }
+  ];
+
+  let score = 0;
+  let activeObject = null;
+  let correctAnswerIndex = null;
+  let timer = null;
+  let timeLeft = settings.timerSeconds;
+
+  class MovingObject {
+    constructor(index) {
+      this.index = index;
+      this.active = true;
+      this.speedX = (Math.random() * 1 + 0.5) * (Math.random() < 0.5 ? -1 : 1);
+      this.speedY = (Math.random() * 1 + 0.5) * (Math.random() < 0.5 ? -1 : 1);
+      this.posX = Math.random() * (window.innerWidth - settings.objectSize);
+      this.posY = Math.random() * (window.innerHeight - settings.objectSize);
+
+      this.element = document.createElement('div');
+      this.element.classList.add('object');
+      this.element.style.width = settings.objectSize + 'px';
+      this.element.style.height = settings.objectSize + 'px';
+      this.element.style.backgroundImage = `url(${settings.objectImageUrl})`;
+      this.element.style.left = this.posX + 'px';
+      this.element.style.top = this.posY + 'px';
+
+      this.element.addEventListener('click', () => {
+        if (!this.active || activeObject) return;
+        activeObject = this;
+        this.showQuestion();
+      });
+
+      game.appendChild(this.element);
+    }
+
+    showQuestion() {
+      const q = questions[this.index];
+      questionText.textContent = q.question;
+      optionsContainer.innerHTML = '';
+      q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = opt;
+        btn.onclick = () => this.checkAnswer(i);
+        optionsContainer.appendChild(btn);
+      });
+      correctAnswerIndex = q.correct;
+      timeLeft = settings.timerSeconds;
+      updateTimerDisplay();
+      questionBox.style.display = 'block';
+      timerDisplay.style.display = 'block';
+      startTimer();
+    }
+
+    checkAnswer(selected) {
+      if (selected === correctAnswerIndex) {
+        playMagicSound();
+        score++;
+        scoreDisplay.textContent = 'Score: ' + score;
+        this.active = false;
+        game.removeChild(this.element);
+        questionBox.style.display = 'none';
+        timerDisplay.style.display = 'none';
+        activeObject = null;
+        clearInterval(timer);
+        checkGameEnd();
+      } else {
+        const buttons = optionsContainer.querySelectorAll('button');
+        buttons.forEach((btn, i) => {
+          if (i === selected) {
+            btn.classList.add('incorrect');
+            setTimeout(() => btn.classList.remove('incorrect'), 600);
+          }
+        });
+      }
+    }
+
+    move() {
+      if (!this.active) return;
+      this.posX += this.speedX;
+      this.posY += this.speedY;
+
+      if (this.posX <= 0 || this.posX >= window.innerWidth - settings.objectSize) this.speedX = -this.speedX;
+      if (this.posY <= 0 || this.posY >= window.innerHeight - settings.objectSize) this.speedY = -this.speedY;
+
+      this.element.style.left = this.posX + 'px';
+      this.element.style.top = this.posY + 'px';
+    }
+  }
+
+  const movingObjects = [];
+
+  function createObjects() {
+    for (let i = 0; i < questions.length; i++) {
+      movingObjects.push(new MovingObject(i));
+    }
+  }
+
+  function animate() {
+    movingObjects.forEach(obj => obj.move());
+    requestAnimationFrame(animate);
+  }
+
+  function updateTimerDisplay() {
+    timerDisplay.textContent = 'Time: ' + timeLeft;
+    if (timeLeft <= 5) {
+      timerDisplay.style.color = '#ff4444';
+      timerDisplay.style.textShadow = '0 0 8px #ff4444';
+    } else {
+      timerDisplay.style.color = '#fff';
+      timerDisplay.style.textShadow = '0 0 5px #000';
+    }
+  }
+
+  function startTimer() {
+    clearInterval(timer);
+    timer = setInterval(() => {
+      timeLeft--;
+      updateTimerDisplay();
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        hideQuestionOnTimeout();
+      }
+    }, 1000);
+  }
+
+  function hideQuestionOnTimeout() {
+    if (!activeObject) return;
+    questionBox.style.display = 'none';
+    timerDisplay.style.display = 'none';
+    activeObject = null;
+    checkGameEnd();
+  }
+
+  function checkGameEnd() {
+    const remaining = movingObjects.filter(o => o.active);
+    if (remaining.length === 0) {
+      congrats.style.display = 'block';
+    }
+  }
+
+  function playMagicSound() {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = 'triangle';
+    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    oscillator.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.3);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
+
+    oscillator.stop(audioCtx.currentTime + 0.3);
+  }
+
+  createObjects();
+  animate();
+
+  window.addEventListener('resize', () => {
+    movingObjects.forEach(obj => {
+      obj.posX = Math.min(obj.posX, window.innerWidth - settings.objectSize);
+      obj.posY = Math.min(obj.posY, window.innerHeight - settings.objectSize);
+      obj.element.style.left = obj.posX + 'px';
+      obj.element.style.top = obj.posY + 'px';
+    });
+  });
+</script>
+</body>
+</html>
